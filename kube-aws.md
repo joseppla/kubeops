@@ -1,20 +1,20 @@
-#### Kubernetes
+#### Kubernetes en AWS
 
- Hace un año atrás deployar un cluster de Kubernetes desde cero no era tarea fácil, tenias que hacerlo a mano, crear tu propia herramienta o usar alguna solución ya existente que no estaba ni completa ni muy bien documentada. Kubernetes era algo reservado solo a unos pocos conocedores del sistema o apasionados de las nuevas tecnologías. Si lo que queríamos era un cluster en HA, resistente a fallos, con autoescalado, en tu hosting habitual y con el nivel de seguridad/fiabilidad de un entorno de producción la cosa ya se volvía casi imposible. Mucha gente, entre los cuales me incluyo, desistía al ver la faena que se le venía encima sin ver las ventajas. Un servidor miro varias veces la documentación para hacerlo pero la complejidad de montarlo a mano y la indecisión de que herramienta usar me tiró para atrás.
+ Hace un año atrás deployar un cluster de Kubernetes desde cero no era tarea fácil, tenias que hacerlo a mano, crear tu propia herramienta o usar alguna solución ya existente que no estaba ni completa ni muy bien documentada. Kubernetes era algo reservado solo a unos pocos conocedores del sistema o apasionados de las nuevas tecnologías. Si lo que queríamos era un cluster en HA, resistente a fallos, con autoescalado, en tu hosting habitual y con el nivel de seguridad/fiabilidad de un entorno de producción la cosa ya se volvía casi imposible. Mucha gente, entre los cuales me incluyo, desistía al ver la faena que se le venía encima sin ver las ventajas que consigo traía. Un servidor miro varias veces la documentación para hacerlo pero la complejidad de montarlo a mano, la indecisión de que herramienta usar y la falta de HA me hicieron desistir.
 
 <!-- TEASER_END -->
 
 
-Afortunadamente hoy en dia existen varias herramients que nos facilitan esta taréa y se puede decir que algunas de ellas han madurado lo suficiente como para que los creadores de kubernetes decidan substituir su proipia herramienta "kubeup.sh" en favor de estas. Entre las mas conocidas y las únicas recomendadas por Kubernetes estan Kops y kube-aws. Kops es capaz de desplegar un cluster de kubernetes tanto en Amazon como en Google Cloud y hace uso de Terraform (infrastructura en código de Hashicorp). kube-aws es una herramienta creada por CoreOS y hace uso de Cloudformation, solo deploya hosts en CoreOS y solo nos sirve para desplegar en AWS.
+Afortunadamente hoy en dia existen varias herramientas que nos facilitan esta taréa y se puede decir que algunas de ellas han madurado lo suficiente como para que los creadores de kubernetes decidan substituir su proipia herramienta "kubeup.sh" en favor de estas. Entre las mas conocidas y las únicas recomendadas por Kubernetes estan Kops y kube-aws. Kops es capaz de desplegar un cluster de kubernetes en AWS haciendo uso de Terraform (infrastructura en código de Hashicorp). kube-aws es una herramienta creada por CoreOS que hace uso de Cloudformation (infraestructura en código de Amazon) y también deploya en AWS.
 
 
 ###### kube-aws o pescando atunes en el paraíso 
 
-Como  un servidor ya tenia Cloudformation por la mano y la infrastructura de mi empresa estaba en AWS lo más lógico era elegir kube-aws, no desplegaría un clusgter en GCE ni sabía nada de Terraform. kube-aws me permitía lanzar el cluster desde la propia herramienta o exportar el fichero a cloudformation el cual podia modificar a posteriori a mi gusto, esa fué realmente la clave de elegir kube-aws. A los quince minutos de haberme puesto a trastear con la herramienta tenia montado un cluster con 2 masters, 6 nodos, etcd y sobre mi VPC de Staging, que más se podía pedir!
+Como  un servidor ya tenia Cloudformation por la mano y la infrastructura de mi empresa estaba en AWS lo más lógico era elegir kube-aws, no desplegaría un cluster en otro hosting ni sabía nada de Terraform. kube-aws me permitía lanzar el cluster desde la propia herramienta o exportar el fichero a cloudformation el cual podia modificar a posteriori a mi gusto, esa fué realmente la clave de elegir kube-aws. A los quince minutos de haberme puesto a trastear con la herramienta tenia montado un cluster con 2 masters, 6 nodos, etcd y sobre mi VPC de Staging, que más se podía pedir!
 
 Una vez realizadas las comprobaciones de que con el cliente podia acceder al cluster me puse a mirar como desplegar una aplicación sencilla, un clásico, wordpress con mysql.
 
-Aquí la cosa ya costó un poco, la documentación de Kubernetes no es que sea muy clara en algunos aspectos, lo básico esta cubierto, lo complejo a veces no explicado con detalle o incompleto y las últimas features añadidas a veces ni aparecen, hay que ir buscando por github y los foros donde, sin muchas complicaciones, se acaba encuentrando lo que se necesita.
+Aquí la cosa ya costó un poco, la documentación de Kubernetes no es que sea muy clara en algunos aspectos, lo básico esta cubierto, lo complejo a veces no explicado con detalle o incompleto y las últimas features añadidas a veces ni aparecen, hay que ir buscando por Github y los foros donde, sin muchas complicaciones, se acaba encuentrando lo que se necesita.
 
 Después de pelearme un poco con los ficheros de configuración en YAML y queriendo deployar usando las ultimas features que habia implementado Kubernetes conseguí lanzar un Wordpress conectado a un MySql y dicho blog publicado a través de un ELB de Amazon, solo me faltaba apuntar un DNS!
 
@@ -24,7 +24,7 @@ Después de pelearme un poco con los ficheros de configuración en YAML y querie
 Sinceramente el despliegue que realizé es bastante sencillo una vez entendida la filosofía de Kubernetes y su funcionamiento, pero hay tantas cosas que estan tan bien pensadas que vale la pena dedicarle tiempo a entender que es, como fuciona, que partes lo componen y las ventajas que trae consigo. Entre algunas de ellas y para no extenderme diré que tiene de salida y dejandome muchas en el tintero estas features:
 
 - Autodiscovery
-- Montaje de volumenes (Amazon EBS, GCE volumes)
+- Montaje de volumenes (Amazon EBS/EFS, GCE volumes)
 - Ficheros de configuración actualizables en caliente
 - Rolling updates y rollbacks automaticos
 - Healthchecks
@@ -41,19 +41,19 @@ y mucho más
 
 ###### Entrando en detalle 
 
-A partir de aquí voy a explicar paso a paso con detalle todo el proceso de instalación, para los que sean vagos ya aviso que el artículo va a ser bastante extenso, ahora bien, una vez finalizado tendremos a nuestra disposición un cluster de Kubernetes en HA preparado para deployar servicios en un entorno de pruebas/staging usando ELBs de Amazon y alguna cosa mas, en el tintero se quedaran el autoscaling de los nodos, auto-recuperación del ETCD , registro automatico de DNS para los servicios y muchas cosas mas que ya cubriremos en futuros posts o que se pueden obtener con una pequeña búsqueda por internet.
+A partir de aquí voy a explicar paso a paso con detalle todo el proceso de instalación, para los que sean vagos ya aviso que el artículo va a ser bastante extenso, ahora bien, una vez finalizado tendremos a nuestra disposición un cluster de Kubernetes en HA preparado para deployar servicios en un entorno de pruebas/staging usando ELBs de Amazon y alguna cosa mas, en el tintero se quedaran el autoscaling de los nodos, auto-recuperación del ETCD, registro automatico de DNS para los servicios y muchas cosas mas que ya cubriremos en futuros posts o que se pueden obtener con una pequeña búsqueda por internet.
 
 
 ###### Preparando el barco para zarpar
 
 Doy por supuesto una série de conocimientos en Amazon que no cubriré aquí ya que no es el propósito de este blog ni de este artículo, algunos de ellos se pueden aprender en poco tiempo y otros son mas costosos, que nadie desista en intentarlo ya que no todos son necesarios si lo único que queremos hacer es deplegar algo par empezar a jugar con Kubernetes.
 
-También será necesario disponer del cliente de aws configurado con una access key id y secret access key con los permisos necesarios para que la herramienta pueda realizar cambios en AWS, si no es así el primer paso es crear un usario nuevo y configurar el cliente de AWS de linea de comandos, toda la información necesaria se puede encontrar en la web de amazon. También necesitaremos una clave KMS que podemos crear desde la consola de IAM de AWS así como una clave SSH para poder acceder a los nodos.
+También será necesario disponer del cliente de aws configurado con una access key id y secret access key con los permisos necesarios para que la herramienta pueda realizar cambios en AWS, si no es así el primer paso es crear un usario nuevo y configurar el cliente de AWS de linea de comandos, toda la información necesaria se puede encontrar en la web de amazon. También necesitaremos una clave KMS que podemos crear desde la consola de IAM de AWS así como una clave SSH para poder acceder a los nodos y un bucket de S3 para subir ficheros.
 
 Lo primero que tenemos que hacer para poder empezar a definir como será nuestro cluster es bajarnos la herramienta kube-aws de github, la podemos encontrar en https://github.com/coreos/kube-aws. La podemos poner en una carpeta de nuestra elección o copiarla en /usr/bin para mayor facilidad, la marcamos como ejecutable con el clásico chmod +x y ya estamos listos para empezar.
 
 
-###### Inicialización del template
+###### Inicialización del template y personalización
 
 El primer paso para empezar a definir nuestro cluster en HA es inicializar un fichero de template que se usara para generar el fichero de configuración final, para ello creamos un directorio vacío y ejecutamos el siguiente comando:
 
@@ -234,13 +234,13 @@ Para poder arrancar el cluster necesitamos un bucket de S3 donde se van a subir 
 
 Dicho esto ya solo nos queda lanzar el comando de creación del stack apuntando a un bucket de S3 ya existente:
 ```
-kube-aws up --s3-uri s3://kube-aws-edyo
+kube-aws up --s3-uri s3://kube-aws-kubeops
 ```
-A partir de aquí podremos seguir la creación de todos estos stacks desde el dashboard de AWS Cloudformation, para los que no esteis familiarizados con esta herramienta solo hay que marcar cada uno de los stacks y en la pestaña de events podremos ir viendo los recursos que se van creando y su estado. Si todo v abién en unos 10 minutos deberíamos tener listo nuestro cluster de Kubernetes.
+A partir de aquí podremos seguir la creación de todos estos stacks desde el dashboard de AWS Cloudformation, para los que no esteis familiarizados con esta herramienta solo hay que marcar cada uno de los stacks y en la pestaña de events podremos ir viendo los recursos que se van creando y su estado. Si todo v abién en unos 10 minutos deberíamos tener listo nuestro cluster de Kubernetes. En su defecto esperaremos a que la herramienta nos diga que el cluster ya esta creado y nos lo creeremos ;-)
 
 
 ###### kubectl,  la herramienta de interacción con el cluster
 
-
+Para poder interactuar con Kubernetes es necesaria una herramienta de comandos, miento, se puede hacer a través de una UI que ha ido mejorando notablemente a través de las versiones pero para sacar realmente la potencia de kubernetes y como todos sabemos, las herramientas en linea de comandos suelen ser bastante mas potentes, escriptables, etc,etc.
 
 
